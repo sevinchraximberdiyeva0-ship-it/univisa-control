@@ -1,0 +1,16 @@
+import fs from 'node:fs';
+import { parseDocument } from 'yaml';
+import assert from 'node:assert/strict';
+const document=parseDocument(fs.readFileSync('docker-compose.yml','utf8'),{uniqueKeys:true});
+assert.equal(document.errors.length,0,document.errors.map(e=>e.message).join('\n'));
+const compose=document.toJS();
+assert.equal(compose.name,'univisa-control');
+for(const name of ['postgres','redis','migrate','api','worker','web'])assert.ok(compose.services[name],`Missing ${name}`);
+for(const name of ['postgres','redis','api','worker'])assert.ok(compose.services[name].healthcheck,`Missing healthcheck: ${name}`);
+assert.equal(compose.services.api.depends_on.migrate.condition,'service_completed_successfully');
+assert.equal(compose.services.worker.depends_on.migrate.condition,'service_completed_successfully');
+assert.ok(compose.services.redis.command.includes('noeviction'));
+assert.ok(compose.services.redis.command.includes('--appendonly'));
+for(const name of ['private_files','postgres_data','redis_data'])assert.ok(Object.hasOwn(compose.volumes,name),`Missing persistent volume: ${name}`);
+for(const file of ['Dockerfile','Dockerfile.web','deploy/nginx.conf'])assert.ok(fs.existsSync(file));
+console.log('Docker Compose YAML, dependency conditions, health checks and persistence structure passed. Docker engine/build/runtime NOT exercised by this check.');

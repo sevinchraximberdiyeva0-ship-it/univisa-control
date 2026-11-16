@@ -1,0 +1,36 @@
+{
+  "name": "univisa-control",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web \"npm run dev -w apps/api\" \"npm run dev -w apps/web\"",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test -w apps/api",
+    "db:generate": "npm run db:generate -w apps/api",
+    "db:migrate": "npm run db:migrate -w apps/api",
+    "db:seed": "npm run db:seed -w apps/api",
+    "worker": "npm run worker -w apps/api",
+    "test:integration": "node scripts/integration.mjs",
+    "test:e2e": "node scripts/integration.mjs --browser",
+    "check:compose": "node scripts/check-compose.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "concurrently": "^9.2.0",
+    "deepmerge-ts": "^8.0.2",
+    "effect": "^3.22.4",
+    "embedded-postgres": "^18.6.0-beta.19",
+    "typescript": "~5.9.3",
+    "uuid": "^11.1.1",
+    "yaml": "^2.9.1"
+  },
+  "overrides": {
+    "deepmerge-ts": "$deepmerge-ts",
+    "effect": "$effect",
+    "uuid": "$uuid"
+  }
+}
