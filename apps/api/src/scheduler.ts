@@ -6,13 +6,15 @@ import { deliverTelegramResponse } from './telegram.js';
 import { reconcileSmsReceipts } from './sms-receipts.js';
 
 export const QUEUE_NAME='univisa-delivery';
-export function queueRuntime(url:string,processor=async(name:string,id:string)=>name==='telegram-reply'?deliverTelegramResponse(id):deliver(id)){
+export type QueueRuntimeOptions={prefix?:string;autorun?:boolean};
+export function queueRuntime(url:string,processor=async(name:string,id:string)=>name==='telegram-reply'?deliverTelegramResponse(id):deliver(id),options:QueueRuntimeOptions={}){
   const producer=new Redis(url,{maxRetriesPerRequest:1,enableOfflineQueue:false,connectTimeout:3000});
   const consumer=new Redis(url,{maxRetriesPerRequest:null});
   // Errors are logged without connection strings or credentials by the owning worker.
   producer.on('error',()=>{});consumer.on('error',()=>{});
-  const queue=new Queue(QUEUE_NAME,{connection:producer});
-  const worker=new Worker(QUEUE_NAME,job=>processor(job.name,String(job.data.id)),{connection:consumer,concurrency:4});
+  const prefix=options.prefix??'bull';
+  const queue=new Queue(QUEUE_NAME,{connection:producer,prefix});
+  const worker=new Worker(QUEUE_NAME,job=>processor(job.name,String(job.data.id)),{connection:consumer,prefix,autorun:options.autorun??true,concurrency:4});
   queue.on('error',()=>{});worker.on('error',()=>{});
   worker.on('failed',async job=>{
     if(!job||job.name!=='deliver'||job.attemptsMade<4)return;

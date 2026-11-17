@@ -41,6 +41,8 @@ Current checks: **74 unit/API tests passed, 1 real Redis test skipped; 2 browser
 
 To test real queue persistence in an isolated Redis instance, set `TEST_REDIS_URL=redis://127.0.0.1:6379/15` in your shell and run `npm run test:integration`. DB 15 must be dedicated to tests; do not use production Redis. CI declares a Redis 7 service for this test, but cloud CI execution has not been observed here.
 
+For a **required** Redis check, run `npm run test:redis` instead. This command fails before starting PostgreSQL if `TEST_REDIS_URL` is missing. CI sets `REQUIRE_REDIS_TESTS=true`, so a missing Redis service cannot silently turn these checks into skipped tests. The four recovery tests use real PostgreSQL delivery records and the application processor, with a unique Redis queue prefix per run. They cover worker replacement, loss of queue data, replay prevention and retained failed jobs. No external notification providers are called; only synthetic in-app messages are processed. Local Windows verification on 17 November: 74 tests passed and 4 Redis cases skipped because no Redis runtime is installed.
+
 Reminder thresholds are operational defaults, **not immigration law**. Authorized legal staff must verify rules, processing basis, retention, and deployment residency before production.
 
 ## Documentation

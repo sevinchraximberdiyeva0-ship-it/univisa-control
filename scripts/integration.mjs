@@ -6,6 +6,9 @@ import path from 'node:path';
 import pgClient from 'pg';
 const { pg_ctl }=process.platform==='win32'?await import('@embedded-postgres/windows-x64'):{pg_ctl:undefined};
 const root=process.cwd();
+const requireRedis=process.argv.includes('--redis')||process.env.REQUIRE_REDIS_TESTS==='true';
+if(requireRedis&&!process.env.TEST_REDIS_URL)throw new Error('Real Redis tests required: set TEST_REDIS_URL to a dedicated test instance using database /15');
+if(process.env.TEST_REDIS_URL&&new URL(process.env.TEST_REDIS_URL).pathname!=='/15')throw new Error('TEST_REDIS_URL must target dedicated test database /15');
 const dir=path.resolve(root,'test-results',`postgres-${Date.now()}`);
 await mkdir(dir,{recursive:true});
 const password=randomBytes(24).toString('hex');
@@ -30,6 +33,6 @@ try {
     children.push(spawn(process.execPath,[path.resolve('node_modules/vite/bin/vite.js'),'--host','127.0.0.1'],{cwd:path.join(root,'apps/web'),env:process.env,stdio:'inherit',windowsHide:true}));
     await ready('http://localhost:4000/api/health');await ready('http://localhost:5173');
     await run('node_modules/@playwright/test/cli.js',['test'],{E2E_ADMIN_PASSWORD:env.SEED_ADMIN_PASSWORD,E2E_STUDENT_PASSWORD:env.SEED_STUDENT_PASSWORD});
-  }else await run('node_modules/vitest/vitest.mjs',['run','--root','apps/api'],{TEST_DATABASE_URL:url,SMS_MODE:'mock',TELEGRAM_MODE:'mock',ALLOW_LIVE_NOTIFICATIONS:'false'});
+  }else await run('node_modules/vitest/vitest.mjs',['run','--root','apps/api'],{TEST_DATABASE_URL:url,REQUIRE_REDIS_TESTS:String(requireRedis),SMS_MODE:'mock',TELEGRAM_MODE:'mock',ALLOW_LIVE_NOTIFICATIONS:'false'});
   console.log('Database integration run completed.');
 } finally {for(const child of children)child.kill();if(started){if(process.platform==='win32')await control(['stop','-D',dir,'-m','fast','-w']);else await pg.stop();}}

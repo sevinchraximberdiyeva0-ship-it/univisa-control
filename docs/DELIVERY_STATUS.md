@@ -24,6 +24,12 @@ This is an executable full-stack implementation with tested core workflows. It i
 
 ## Notification reliability update
 
+### Recovery-test strengthening — 17 November 2026
+
+The former Redis test used an in-memory Set as its processing ledger. It is replaced by four tests that use the actual application delivery processor and persisted PostgreSQL NotificationJob/NotificationAttempt rows: consumer replacement, deletion/rebuilding of a uniquely namespaced queue, replay of a completed notification, and recovery of a retained failed job. Tests operate on synthetic in-app records only and never use FLUSHDB or FLUSHALL. Each run owns an isolated Redis queue prefix, avoiding interference with other queues in the test database.
+
+`npm run test:redis` and CI's `REQUIRE_REDIS_TESTS=true` make Redis mandatory; missing configuration or an unavailable service fails the check rather than reporting a skipped success. The ordinary local integration command still permits an explicitly reported skip. Latest local results: **74 passed, 0 failed, 4 skipped**, both migrations match the schema, TypeScript and production builds pass. Docker/Redis remain unavailable on this Windows host. GitHub reports the previously pushed CI run [43862146048](https://github.com/sevinchraximberdiyeva0-ship-it/univisa-control/actions/runs/43862146048) succeeded; that older run does not verify the new four-case suite. New CI execution will be checked after this update is pushed.
+
 - DevSMS is selectable per university. Credentials are AES-GCM encrypted or supplied through environment variables; neither credentials nor encrypted payload fields are exposed by monitoring APIs.
 - `SMS_MODE=mock`, `TELEGRAM_MODE=mock` and `ALLOW_LIVE_NOTIFICATIONS=false` are safe defaults. Real sending requires explicit live mode plus the independent allow gate. All tests use synthetic fixtures/mocked transports; no live messages were sent.
 - SMS success from send returns ACCEPTED. Only a valid tenant-specific raw-body HMAC callback or authenticated status lookup can mark it DELIVERED. Repeated/contradictory final receipts cannot downgrade delivery. Status polling is bounded and never resends accepted messages.
