@@ -14,7 +14,7 @@ Use dedicated PostgreSQL/Redis and the `.env.example` variables. Never share thi
 6. Select DevSMS in SMS Management or the provider API. Configure an API token, independent HMAC webhook key and approved sender in encrypted tenant settings or DEVSMS_* secret environment variables. Configure the HTTPS university-specific callback route and verify signed receipts/status polling against the vendor account. Keep SMS_MODE=mock and ALLOW_LIVE_NOTIFICATIONS=false until an authorized synthetic-recipient test is arranged. An accepted send is never treated as delivered; segment billing and vendor-specific evidence still need validation.
 7. Monitor `/api/health`, worker `scheduler_tick` timestamps, oldest PENDING row, FAILED/UNKNOWN/UNAVAILABLE counts, database backups, storage capacity and Redis errors. API health currently checks PostgreSQL; worker/Redis readiness requires external monitoring. Alert if no scheduler tick occurs for 90 seconds.
 
-Containers run API/worker as an unprivileged node user. Nginx is a separate image. Docker runtime and production Compose have not been qualified unless explicitly recorded in DELIVERY_STATUS.
+Containers run API/worker as an unprivileged node user. Nginx is a separate image. The isolated production-mode Compose startup/restart smoke test passed in [CI run 44066510870](https://github.com/sevinchraximberdiyeva0-ship-it/univisa-control/actions/runs/44066510870); see DELIVERY_STATUS for exact coverage and remaining production qualification.
 
 ## Image targets and isolated deployment verification
 
