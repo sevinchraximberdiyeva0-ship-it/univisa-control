@@ -24,8 +24,10 @@ services:
       timeout: 3s
       retries: 12
   migrate:
-    build: .
-    env_file: .env
+    build:
+      context: .
+      target: migration
+    env_file: ${UNIVISA_ENV_FILE:-.env}
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-univisa}
     command: [npm, run, db:migrate]
@@ -33,9 +35,10 @@ services:
       postgres: {condition: service_healthy}
   api:
     build: .
-    env_file: .env
+    env_file: ${UNIVISA_ENV_FILE:-.env}
     environment:
       NODE_ENV: production
+      PORT: 4000
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-univisa}
       REDIS_URL: redis://redis:6379
       STORAGE_PATH: /app/storage
@@ -53,7 +56,7 @@ services:
     restart: unless-stopped
   worker:
     build: .
-    env_file: .env
+    env_file: ${UNIVISA_ENV_FILE:-.env}
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-univisa}
@@ -74,7 +77,13 @@ services:
       context: .
       dockerfile: Dockerfile.web
     ports: ["127.0.0.1:8080:80"]
-    depends_on: [api]
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1/]
+      interval: 15s
+      timeout: 5s
+      retries: 3
     restart: unless-stopped
 volumes:
   postgres_data:

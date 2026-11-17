@@ -41,6 +41,10 @@ The former Redis test used an in-memory Set as its processing ledger. It is repl
 
 ## Remaining work / external dependencies
 
+### Docker verification work in progress — 17 November 2026
+
+Added an isolated Docker smoke-test job and command (`npm run test:docker`), separate migration/runtime image targets, production dependency pruning, selectable environment-file path, explicit container API port, and frontend readiness/health checks. Four local helper tests pass, as do TypeScript and Compose structure checks. The smoke test is designed to validate actual image builds, migration startup, frontend/API access, private-storage permissions, worker processing, replay prevention and Redis-server/worker restart. Docker is unavailable locally; these runtime claims remain unverified until the new CI job succeeds. No live provider credentials are used.
+
 1. Genuine Telegram credentials, HTTPS webhook registration, official university bot identity and authorized live test.
 2. DevSMS account/API token, separate webhook signing key, approved sender, HTTPS callback domain, vendor contract/status semantics and an authorized non-student live test with actual receipt evidence. Adapter code is implemented; production delivery is not verified. Its documented send route is restricted to +998 numbers. Segment-based billing/budget reconciliation still requires vendor validation.
 3. Four opt-in real Redis/PostgreSQL cases passed in CI: consumer replacement, scoped queue-data loss/reconstruction, completed-message replay suppression and retained-failed-job recovery. Broader Redis-server process-kill/restart, network-partition, crash-at-provider-boundary and load tests still require production-like infrastructure. Redis persistence/noeviction and worker heartbeat are configured; distributed availability and capacity remain to be qualified.

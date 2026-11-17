@@ -16,6 +16,22 @@ Use dedicated PostgreSQL/Redis and the `.env.example` variables. Never share thi
 
 Containers run API/worker as an unprivileged node user. Nginx is a separate image. Docker runtime and production Compose have not been qualified unless explicitly recorded in DELIVERY_STATUS.
 
+## Image targets and isolated deployment verification
+
+The default Dockerfile target is `runtime`: production dependencies, compiled API/worker source and the worker healthcheck, running as UID 1000. The separate `migration` target retains Prisma CLI and migration files; Compose uses it for the one-shot migration service. The API port is explicitly 4000 inside Compose, independent of a developer shell's PORT value. Nginx starts after API readiness and has its own healthcheck.
+
+`UNIVISA_ENV_FILE` selects the container environment file; it defaults to `.env`. Set it to the same file used for Compose interpolation, for example on PowerShell:
+
+```powershell
+$env:UNIVISA_ENV_FILE = (Resolve-Path .env).Path
+docker compose --env-file $env:UNIVISA_ENV_FILE build
+docker compose --env-file $env:UNIVISA_ENV_FILE up -d --wait
+```
+
+For disposable verification, use `npm run test:docker` on a Docker-enabled host (Compose >= 2.24.4). This uses `deploy/compose.smoke.yml`, generated private credentials and a guarded unique project name. It publishes only ephemeral loopback frontend/API ports, processes synthetic in-app records with live messaging disabled, restarts the actual Redis container and worker, tests replay suppression, checks private-storage permissions and repeats migration deployment. Cleanup targets only that generated Compose project. Never substitute production credentials or point the smoke test at existing application volumes.
+
+The test publishes redacted JSON results and failure diagnostics as CI artifacts; its environment file is removed and never uploaded. Passing smoke tests validate the tested single-host container configuration, not TLS termination, host encryption, legal residency, provider delivery, backup restores or high availability.
+
 ## Backups
 
 Schedule encrypted PostgreSQL backups with WAL archiving appropriate to the university's RPO; back up private files consistently and preserve encryption-key versions separately in a secret manager. Redis append-only persistence improves recovery; the database outbox is authoritative. Test restoration into isolated infrastructure and verify documents, versions, pending reminders and tenant boundaries. Never restore production personal data into an unapproved developer machine.

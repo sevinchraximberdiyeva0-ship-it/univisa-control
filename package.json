@@ -16,6 +16,7 @@
     "worker": "npm run worker -w apps/api",
     "test:integration": "node scripts/integration.mjs",
     "test:redis": "node scripts/integration.mjs --redis",
+    "test:docker": "node scripts/docker-smoke.mjs",
     "test:e2e": "node scripts/integration.mjs --browser",
     "check:compose": "node scripts/check-compose.mjs"
   },

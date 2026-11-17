@@ -1,0 +1,20 @@
+# Docker Compose >= 2.24.4. Only used by scripts/docker-smoke.mjs.
+# No database/Redis host ports. Web/API use ephemeral loopback ports.
+services:
+  postgres:
+    ports: !reset []
+  redis:
+    ports: !reset []
+  api:
+    ports: !override ["127.0.0.1::4000"]
+    environment:
+      SMS_MODE: mock
+      TELEGRAM_MODE: mock
+      ALLOW_LIVE_NOTIFICATIONS: "false"
+  worker:
+    environment:
+      SMS_MODE: mock
+      TELEGRAM_MODE: mock
+      ALLOW_LIVE_NOTIFICATIONS: "false"
+  web:
+    ports: !override ["127.0.0.1::80"]

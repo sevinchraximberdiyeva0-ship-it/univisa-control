@@ -52,3 +52,9 @@ Reminder thresholds are operational defaults, **not immigration law**. Authorize
 - [Deployment](docs/DEPLOYMENT.md)
 - [Notification rules](docs/NOTIFICATION_RULES.md)
 - [Delivery status](docs/DELIVERY_STATUS.md)
+
+## Docker deployment smoke test
+
+With Docker Engine and Compose >= 2.24.4 available, run `npm run test:docker`. The test builds the real API/worker, migration and frontend images, starts a uniquely named isolated Compose project with generated credentials, and verifies Nginx/SPA/API access, authentication boundaries, non-root execution, writable private storage, worker delivery and replay prevention. It also restarts Redis and the worker around a pending synthetic in-app notification, then reruns migrations.
+
+The smoke test never reads your `.env`, never enables live messaging, and removes only its generated project containers/volumes/images afterward. Database/Redis ports are not published; frontend/API use random loopback ports. Generated credentials are removed, and redacted results remain in ignored `test-results/univisa-smoke-*/`. The GitHub Actions `docker-smoke` job runs this test on a Docker-enabled Linux host. Its first execution must pass before treating application Docker deployment as verified.
