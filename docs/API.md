@@ -6,6 +6,20 @@ All paths use `/api`. JSON errors have `error` and optional validation `issues`.
 | --- | --- | --- |
 | GET /health | Public | Database readiness and provider modes |
 | POST /auth/login | Public/rate limited | university slug, email, password, optional otp; returns user/CSRF, sets opaque session |
+| GET /auth/registration-options?university= | Public | Open university registration metadata/faculties only |
+| POST /auth/student-registration | Exact origin, rate limited | ID/passport metadata and student details; processing acknowledgement; creates pending identity/application and own session |
+| GET /auth/identity | Own student session | Masked identity review status/notes; available while admission pending |
+| PATCH /auth/student-phone | Own student + current password | Update encrypted phone, clear verification; preserve user/passkey IDs |
+| POST /auth/passkeys/authentication/options | Exact origin, rate limited | Discoverable student-key authentication challenge; no phone/email/student number needed |
+| POST /auth/passkeys/authentication/verify | Challenge-bound browser | Verify signature, RP/origin, user handle, user verification and counter; creates student session |
+| GET /auth/passkeys | Own student session | List safe device-key metadata |
+| POST /auth/passkeys/registration/options | Own student + current password + CSRF | Require resident platform credential with user verification |
+| POST /auth/passkeys/registration/verify | Own session + challenge + CSRF | Persist verified public key, counter and metadata; no biometric image |
+| DELETE /auth/passkeys/:id | Own student + current password + CSRF | Revoke an owned device key |
+| GET /identity/applications | Officer/admin with MFA | Tenant-scoped masked identity review queue |
+| GET /identity/applications/:id | Officer/admin with MFA | Audited/no-store decrypted metadata view |
+| POST /identity/applications/:id/review | Officer/admin with MFA + CSRF | VERIFIED/REJECTED, notes and explicit originalChecked confirmation |
+| PUT /identity/registration-policy | Admin with MFA + CSRF | Open/close registration for own university |
 | GET /auth/me | Authenticated | Safe user fields and MFA session status |
 | POST /auth/logout | Authenticated | Revoke session |
 | POST /auth/mfa/setup | Authenticated, not enrolled | TOTP secret and provisioning URI |

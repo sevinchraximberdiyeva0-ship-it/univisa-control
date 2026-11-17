@@ -50,6 +50,7 @@ model University {
   retentionDays Int @default(365)
   reminderRevision Int @default(1)
   overdueOffsets Int[] @default([1, 3, 7, 14, 30])
+  studentRegistrationEnabled Boolean @default(false)
   createdAt DateTime @default(now())
   users User[]
   faculties Faculty[]
@@ -70,6 +71,7 @@ model User {
   active Boolean @default(true)
   sessions Session[]
   student Student?
+  passkeys PasskeyCredential[]
   createdAt DateTime @default(now())
   @@unique([universityId,email])
   @@index([universityId,role])
@@ -119,11 +121,56 @@ model Student {
   archivedAt DateTime?
   documents StudentDocument[]
   telegram TelegramConnection?
+  identity StudentIdentity?
   createdAt DateTime @default(now())
   @@unique([universityId,studentNumber])
   @@unique([universityId,email])
   @@unique([id,universityId])
   @@index([universityId,facultyId,archivedAt])
+}
+model StudentIdentity {
+  id String @id @default(cuid())
+  universityId String
+  studentId String @unique
+  student Student @relation(fields:[studentId,universityId],references:[id,universityId])
+  encryptedDetails String
+  fingerprint String
+  numberLast4 String
+  status ReviewState @default(SUBMITTED)
+  reviewedBy String?
+  reviewedAt DateTime?
+  notes String?
+  consentAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([studentId,universityId])
+  @@unique([universityId,fingerprint])
+  @@index([universityId,status])
+}
+model PasskeyCredential {
+  id String @id
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  publicKey Bytes
+  counter BigInt @default(0)
+  transports String[]
+  deviceType String
+  backedUp Boolean
+  name String
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime?
+  @@index([userId])
+}
+model WebAuthnChallenge {
+  id String @id
+  userId String?
+  sessionId String?
+  challenge String
+  purpose String
+  expiresAt DateTime
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([expiresAt])
 }
 model StudentDocument {
   id String @id @default(cuid())

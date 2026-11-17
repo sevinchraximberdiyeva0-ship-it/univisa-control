@@ -1,10 +1,11 @@
 import fs from 'node:fs';
-const source=fs.readFileSync('apps/api/src/app.ts','utf8')+'\n'+fs.readFileSync('apps/api/src/notification-admin.ts','utf8').replace(/notificationAdmin\.(get|post|put)\('([^']+)'/g,(_all,method,route)=>`app.${method}('/api/notifications${route}'`);
+const sources=[['apps/api/src/notification-admin.ts','notificationAdmin','/api/notifications'],['apps/api/src/identity.ts','identityPublic','/api/auth'],['apps/api/src/identity.ts','identityAccount','/api/auth'],['apps/api/src/identity.ts','identityStaff','/api/identity'],['apps/api/src/passkeys.ts','passkeyRouter','/api/auth/passkeys']];
+const source=fs.readFileSync('apps/api/src/app.ts','utf8')+'\n'+sources.map(([file,router,prefix])=>fs.readFileSync(file,'utf8').replace(new RegExp(router+"\\.(get|post|put|patch|delete)\\('([^']+)'",'g'),(_all,method,route)=>`app.${method}('${prefix}${route==='/'?'':route}'`)).join('\n');
 const paths={};
 for(const match of source.matchAll(/app\.(get|post|put|patch|delete)\('([^']+)'/g)) {
   const [,method,raw]=match;if(!raw.startsWith('/api/'))continue;
   const route=raw.slice(4).replace(/:([a-zA-Z]+)/g,'{$1}');
-  const publicRoute=['/health','/auth/login','/sms/receipts'].includes(route);
+  const publicRoute=['/health','/auth/login','/sms/receipts','/auth/registration-options','/auth/student-registration','/auth/passkeys/authentication/options','/auth/passkeys/authentication/verify'].includes(route);
   const parameters=[...route.matchAll(/\{([^}]+)\}/g)].map(m=>({name:m[1],in:'path',required:true,schema:{type:'string'}}));
   if(route==='/students')parameters.push({name:'search',in:'query',required:false,schema:{type:'string',maxLength:100}});
   const operation={summary:`${method.toUpperCase()} ${route}`,operationId:`${method}_${route.replace(/[^a-z0-9]+/gi,'_')}`,tags:[route.split('/')[1]],security:publicRoute?[]:[{sessionCookie:[]}],parameters,responses:{'200':{description:'Successful request'},'201':{description:'Resource created'},'204':{description:'Successful request, no content'},'400':{description:'Invalid input'},'401':{description:'Authentication required'},'403':{description:'Role, tenant, MFA or CSRF restriction'},'404':{description:'Resource not found'},'409':{description:'Duplicate or invalid state transition'}}};

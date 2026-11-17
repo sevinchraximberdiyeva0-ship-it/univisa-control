@@ -14,19 +14,23 @@ import ExcelJS from 'exceljs';
 import { DateTime } from 'luxon';
 import { db } from './db.js';
 import { config } from './config.js';
-import { authenticate,authorize,fail,ownStudent,publicUser,studentScope } from './auth.js';
+import { authenticate,authorize,createSession,fail,ownStudent,publicUser,studentScope } from './auth.js';
 import { decrypt,encrypt,equal,hash,token } from './security.js';
 import { assertTransition,dates,previewImport,remaining,studentInput } from './domain.js';
 import { confirmation,planDocument,render } from './notifications.js';
 import { telegramRouter } from './telegram.js';
 import { smsReceiptRouter } from './sms-receipts.js';
 import { notificationAdmin } from './notification-admin.js';
+import { passkeyRouter } from './passkeys.js';
+import { identityPublic,identityAccount,identityStaff } from './identity.js';
 export const app=express();
 app.disable('x-powered-by');
 app.use(helmet());app.use(cors({origin:config.APP_ORIGIN,credentials:true}));app.use(express.json({limit:'2mb',verify:(req,_res,buffer)=>{(req as express.Request).rawBody=Buffer.from(buffer);}}));app.use(cookieParser());
 app.use(rateLimit({windowMs:60000,limit:300,standardHeaders:'draft-8',legacyHeaders:false}));
 app.get('/api/health',async(_req,res)=>{await db.$queryRaw`SELECT 1`;res.json({status:'ok',sms:config.SMS_MODE,telegram:config.TELEGRAM_MODE});});
 const authLimit=rateLimit({windowMs:15*60000,limit:20,standardHeaders:'draft-8',legacyHeaders:false});
+app.use('/api/auth/passkeys',passkeyRouter);
+app.use('/api/auth',identityPublic);
 app.post('/api/auth/login',authLimit,async(req,res)=>{
   const input=z.object({university:z.string(),email:z.string().email(),password:z.string().min(1).max(128),otp:z.string().optional()}).parse(req.body);
   const university=await db.university.findUnique({where:{slug:input.university}});
@@ -40,10 +44,7 @@ app.post('/api/auth/login',authLimit,async(req,res)=>{
     const updated=await db.user.updateMany({where:{id:user.id,OR:[{lastTotpStep:null},{lastTotpStep:{lt:step}}]},data:{lastTotpStep:step}});
     if(!updated.count)throw fail(401,'MFA code already used'); verified=true;
   }
-  const raw=token(),csrf=token();
-  await db.session.create({data:{id:hash(raw),userId:user.id,csrfHash:hash(csrf),mfaVerified:verified,expiresAt:new Date(Date.now()+config.SESSION_HOURS*3600000)}});
-  res.cookie('uv_session',raw,{httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict',maxAge:config.SESSION_HOURS*3600000,path:'/api'});
-  res.cookie('uv_csrf',csrf,{secure:config.NODE_ENV==='production',sameSite:'strict',maxAge:config.SESSION_HOURS*3600000,path:'/'});
+  const csrf=await createSession(user,res,verified);
   res.json({user:publicUser(user),csrf});
 });
 app.use('/api/telegram/webhook',telegramRouter);
@@ -56,7 +57,8 @@ app.post('/api/sms/receipts',async(req,res)=>{
   res.json({updated:result.count});
 });
 app.use('/api',authenticate);
-app.get('/api/auth/me',(req,res)=>res.json({user:publicUser(req.user),mfaVerified:req.session.mfaVerified}));
+app.use('/api/auth',identityAccount);
+app.get('/api/auth/me',async(req,res)=>res.json({user:publicUser(req.user),mfaVerified:req.session.mfaVerified,identity:req.user.role==='STUDENT'?await db.studentIdentity.findFirst({where:{universityId:req.user.universityId,student:{userId:req.user.id}},select:{status:true,numberLast4:true,notes:true}}):null}));
 app.post('/api/auth/logout',async(req,res)=>{await db.session.delete({where:{id:req.session.id}});res.clearCookie('uv_session',{path:'/api'});res.clearCookie('uv_csrf',{path:'/'});res.sendStatus(204);});
 app.post('/api/auth/mfa/setup',async(req,res)=>{
   if(req.user.mfaEnabled)throw fail(409,'MFA already enrolled');
@@ -70,6 +72,7 @@ app.post('/api/auth/mfa/verify',authLimit,async(req,res)=>{
 });
 app.use('/api',authorize());
 app.use('/api/notifications',notificationAdmin);
+app.use('/api/identity',identityStaff);
 async function audit(universityId:string,actorId:string,action:string,entityId:string) {await db.auditLog.create({data:{universityId,actorId,action,entityId}});}
 app.get('/api/university',async(req,res)=>res.json(await db.university.findUniqueOrThrow({where:{id:req.user.universityId}})));
 app.get('/api/rules',async(req,res)=>res.json(await db.notificationRule.findMany({where:{universityId:req.user.universityId,enabled:true},orderBy:{daysRemaining:'desc'}})));
@@ -248,5 +251,5 @@ app.post('/api/telegram/link-token',async(req,res)=>{
 app.use('/api',(_req,_res,next)=>next(fail(404,'Endpoint not found')));
 app.use((error:unknown,_req:express.Request,res:express.Response,_next:express.NextFunction)=>{
   const e=error as {status?:number;code?:string};const status=error instanceof ZodError?400:e.code==='P2002'?409:e.status??500;
-  res.status(status).json({error:error instanceof ZodError?'Validation failed':status===500?'Internal server error':error instanceof Error?error.message:'Request failed',...(error instanceof ZodError?{issues:error.issues.map(i=>({path:i.path,message:i.message}))}:{})});
+  res.status(status).json({error:error instanceof ZodError?'Validation failed':e.code==='P2002'?'A matching account, student record or identity already exists':status===500?'Internal server error':error instanceof Error?error.message:'Request failed',...(error instanceof ZodError?{issues:error.issues.map(i=>({path:i.path,message:i.message}))}:{})});
 });

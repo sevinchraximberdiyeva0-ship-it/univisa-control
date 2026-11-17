@@ -24,6 +24,14 @@ This is an executable full-stack implementation with tested core workflows. It i
 
 ## Notification reliability update
 
+### ID/passport registration and device passkeys — 17 November 2026
+
+Added university-controlled student registration with encrypted ID/passport metadata, keyed tenant-scoped duplicate detection, masked review lists and audited officer review. New accounts remain restricted until an MFA-protected officer confirms an original-document/person check; no government identity integration is claimed. Existing accounts retain their previous access. Registration is closed by default outside the synthetic demo seed.
+
+Students can enroll/revoke platform passkeys with their current password and sign in without entering a phone or student number. Keys use immutable account IDs, discoverable credentials and required device user verification, with exact RP/origin checks, five-minute single-use cookie/session-bound challenges and signature-counter updates. Phone changes retain the key and reset phone verification. Staff TOTP requirements remain unchanged. The implementation receives no face images and does not perform passport-photo comparison; Face ID/Touch ID/Windows Hello/PIN selection is controlled by the device.
+
+Local verification: **82 unit/API/database tests passed; 4 real-Redis cases skipped locally**. Eight new API tests cover registration gates, consent/dates, encryption/duplicate rollback, pending-access restriction, tenant-scoped disclosure, officer decisions, password checks and challenge binding/replay/expiry. **4 browser tests passed**, including a virtual CTAP2 platform key created and used after two phone changes, assertion replay rejection and pending passport admission. An inaccessible sidebar sign-out on shorter viewports was fixed; a subsequent test expectation was corrected because sign-in preserves the current profile route. TypeScript, production build and dependency audit passed (zero known vulnerabilities). Actual biometric hardware and public HTTPS-domain passkeys are unverified. See STUDENT_IDENTITY.md for scope and production limitations; CI verification for these changes is still pending.
+
 ### Recovery-test strengthening — 17 November 2026
 
 The former Redis test used an in-memory Set as its processing ledger. It is replaced by four tests that use the actual application delivery processor and persisted PostgreSQL NotificationJob/NotificationAttempt rows: consumer replacement, deletion/rebuilding of a uniquely namespaced queue, replay of a completed notification, and recovery of a retained failed job. Tests operate on synthetic in-app records only and never use FLUSHDB or FLUSHALL. Each run owns an isolated Redis queue prefix, avoiding interference with other queues in the test database.

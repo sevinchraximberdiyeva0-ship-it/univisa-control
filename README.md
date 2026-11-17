@@ -47,6 +47,8 @@ Reminder thresholds are operational defaults, **not immigration law**. Authorize
 
 ## Documentation
 
+Student ID/passport registration and Face ID/device passkeys are implemented. University admins control registration opening and officers verify originals before student services become available. Passkey login is independent of phone/student-number changes. This uses the device's WebAuthn authenticator; it does not compare a live face to a passport photograph. See [student identity and passkeys](docs/STUDENT_IDENTITY.md) for enrollment, HTTPS/domain requirements, test evidence and limitations.
+
 - [Architecture](docs/ARCHITECTURE.md)
 - [API](docs/API.md) and [OpenAPI](docs/openapi.yaml)
 - [Deployment](docs/DEPLOYMENT.md)

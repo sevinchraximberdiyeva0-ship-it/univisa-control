@@ -2213,6 +2213,679 @@
         }
       }
     },
+    "/auth/registration-options": {
+      "get": {
+        "summary": "GET /auth/registration-options",
+        "operationId": "get__auth_registration_options",
+        "tags": [
+          "auth"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful request"
+          },
+          "201": {
+            "description": "Resource created"
+          },
+          "204": {
+            "description": "Successful request, no content"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role, tenant, MFA or CSRF restriction"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Duplicate or invalid state transition"
+          }
+        }
+      }
+    },
+    "/auth/student-registration": {
+      "post": {
+        "summary": "POST /auth/student-registration",
+        "operationId": "post__auth_student_registration",
+        "tags": [
+          "auth"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful request"
+          },
+          "201": {
+            "description": "Resource created"
+          },
+          "204": {
+            "description": "Successful request, no content"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role, tenant, MFA or CSRF restriction"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Duplicate or invalid state transition"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "See docs/API.md and the Zod route schema for field validation."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/identity": {
+      "get": {
+        "summary": "GET /auth/identity",
+        "operationId": "get__auth_identity",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful request"
+          },
+          "201": {
+            "description": "Resource created"
+          },
+          "204": {
+            "description": "Successful request, no content"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role, tenant, MFA or CSRF restriction"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Duplicate or invalid state transition"
+          }
+        }
+      }
+    },
+    "/auth/student-phone": {
+      "patch": {
+        "summary": "PATCH /auth/student-phone",
+        "operationId": "patch__auth_student_phone",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful request"
+          },
+          "201": {
+            "description": "Resource created"
+          },
+          "204": {
+            "description": "Successful request, no content"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role, tenant, MFA or CSRF restriction"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Duplicate or invalid state transition"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "See docs/API.md and the Zod route schema for field validation."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/identity/applications": {
+      "get": {
+        "summary": "GET /identity/applications",
+        "operationId": "get__identity_applications",
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful request"
+          },
+          "201": {
+            "description": "Resource created"
+          },
+          "204": {
+            "description": "Successful request, no content"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role, tenant, MFA or CSRF restriction"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Duplicate or invalid state transition"
+          }
+        }
+      }
+    },
+    "/identity/applications/{id}": {
+      "get": {
+        "summary": "GET /identity/applications/{id}",
+        "operationId": "get__identity_applications_id_",
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful request"
+          },
+          "201": {
+            "description": "Resource created"
+          },
+          "204": {
+            "description": "Successful request, no content"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role, tenant, MFA or CSRF restriction"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Duplicate or invalid state transition"
+          }
+        }
+      }
+    },
+    "/identity/applications/{id}/review": {
+      "post": {
+        "summary": "POST /identity/applications/{id}/review",
+        "operationId": "post__identity_applications_id_review",
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful request"
+          },
+          "201": {
+            "description": "Resource created"
+          },
+          "204": {
+            "description": "Successful request, no content"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role, tenant, MFA or CSRF restriction"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Duplicate or invalid state transition"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "See docs/API.md and the Zod route schema for field validation."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/identity/registration-policy": {
+      "put": {
+        "summary": "PUT /identity/registration-policy",
+        "operationId": "put__identity_registration_policy",
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful request"
+          },
+          "201": {
+            "description": "Resource created"
+          },
+          "204": {
+            "description": "Successful request, no content"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role, tenant, MFA or CSRF restriction"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Duplicate or invalid state transition"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "See docs/API.md and the Zod route schema for field validation."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/authentication/options": {
+      "post": {
+        "summary": "POST /auth/passkeys/authentication/options",
+        "operationId": "post__auth_passkeys_authentication_options",
+        "tags": [
+          "auth"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful request"
+          },
+          "201": {
+            "description": "Resource created"
+          },
+          "204": {
+            "description": "Successful request, no content"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role, tenant, MFA or CSRF restriction"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Duplicate or invalid state transition"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "See docs/API.md and the Zod route schema for field validation."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/authentication/verify": {
+      "post": {
+        "summary": "POST /auth/passkeys/authentication/verify",
+        "operationId": "post__auth_passkeys_authentication_verify",
+        "tags": [
+          "auth"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful request"
+          },
+          "201": {
+            "description": "Resource created"
+          },
+          "204": {
+            "description": "Successful request, no content"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role, tenant, MFA or CSRF restriction"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Duplicate or invalid state transition"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "See docs/API.md and the Zod route schema for field validation."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys": {
+      "get": {
+        "summary": "GET /auth/passkeys",
+        "operationId": "get__auth_passkeys",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful request"
+          },
+          "201": {
+            "description": "Resource created"
+          },
+          "204": {
+            "description": "Successful request, no content"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role, tenant, MFA or CSRF restriction"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Duplicate or invalid state transition"
+          }
+        }
+      }
+    },
+    "/auth/passkeys/registration/options": {
+      "post": {
+        "summary": "POST /auth/passkeys/registration/options",
+        "operationId": "post__auth_passkeys_registration_options",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful request"
+          },
+          "201": {
+            "description": "Resource created"
+          },
+          "204": {
+            "description": "Successful request, no content"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role, tenant, MFA or CSRF restriction"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Duplicate or invalid state transition"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "See docs/API.md and the Zod route schema for field validation."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/registration/verify": {
+      "post": {
+        "summary": "POST /auth/passkeys/registration/verify",
+        "operationId": "post__auth_passkeys_registration_verify",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful request"
+          },
+          "201": {
+            "description": "Resource created"
+          },
+          "204": {
+            "description": "Successful request, no content"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role, tenant, MFA or CSRF restriction"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Duplicate or invalid state transition"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "See docs/API.md and the Zod route schema for field validation."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/{id}": {
+      "delete": {
+        "summary": "DELETE /auth/passkeys/{id}",
+        "operationId": "delete__auth_passkeys_id_",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful request"
+          },
+          "201": {
+            "description": "Resource created"
+          },
+          "204": {
+            "description": "Successful request, no content"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role, tenant, MFA or CSRF restriction"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Duplicate or invalid state transition"
+          }
+        }
+      }
+    },
     "/telegram/webhook": {
       "post": {
         "summary": "Official Telegram private-chat command webhook",

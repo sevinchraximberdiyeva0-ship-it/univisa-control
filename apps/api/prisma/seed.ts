@@ -8,7 +8,7 @@ if(process.env.NODE_ENV==='production')throw new Error('Development seed is disa
 if(!password || password.length<14 || !studentPassword || studentPassword.length<14)throw new Error('Set distinct seed passwords with at least 14 characters');
 if(password===studentPassword)throw new Error('Seed passwords must differ');
 try {
-  const university=await db.university.upsert({where:{slug:'demo'},update:{},create:{slug:'demo',name:'UniVisa Demonstration University',contactEmail:'international@example.invalid'}});
+  const university=await db.university.upsert({where:{slug:'demo'},update:{},create:{slug:'demo',name:'UniVisa Demonstration University',contactEmail:'international@example.invalid',studentRegistrationEnabled:true}});
   const admin=await db.user.upsert({where:{universityId_email:{universityId:university.id,email:process.env.SEED_ADMIN_EMAIL??'admin@example.invalid'}},update:{},create:{universityId:university.id,email:process.env.SEED_ADMIN_EMAIL??'admin@example.invalid',name:'Demo Administrator',role:'UNIVERSITY_ADMIN',passwordHash:await bcrypt.hash(password,12)}});
   const facultyNames=['Engineering','Business & Economics','Medicine','Humanities'];
   const faculties=[];
