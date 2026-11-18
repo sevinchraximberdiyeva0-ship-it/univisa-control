@@ -9,7 +9,11 @@ export const config = z.object({
   ALLOW_LIVE_NOTIFICATIONS: z.enum(['true','false']).default('false').transform(v=>v==='true'),
   DEVSMS_TOKEN:z.string().optional(), DEVSMS_WEBHOOK_KEY:z.string().optional(), DEVSMS_SENDER:z.string().default('4546'),
   TELEGRAM_MODE: z.enum(['mock','live']).default('mock'), TELEGRAM_BOT_TOKEN: z.string().optional(),
+  EMAIL_MODE: z.enum(['disabled','mock','live']).default('disabled'),
+  EMAIL_RESEND_API_KEY:z.string().optional(), EMAIL_FROM:z.string().optional(), TEST_EMAIL_OUTBOX:z.string().optional(),
   TELEGRAM_WEBHOOK_SECRET: z.string().optional(), SMS_WEBHOOK_SECRET: z.string().optional()
 }).parse(process.env);
 if (config.TELEGRAM_MODE === 'live' && (!config.TELEGRAM_BOT_TOKEN || (config.TELEGRAM_WEBHOOK_SECRET?.length ?? 0) < 32)) throw new Error('Live Telegram requires token and strong webhook secret');
+if (config.EMAIL_MODE==='live'&&(!config.EMAIL_RESEND_API_KEY?.trim()||!config.EMAIL_FROM?.trim())) throw new Error('Live email requires EMAIL_RESEND_API_KEY and EMAIL_FROM');
+if (config.EMAIL_MODE==='mock'&&(config.NODE_ENV!=='test'||!config.TEST_EMAIL_OUTBOX)) throw new Error('Mock email requires test mode and a test outbox path');
 if (config.NODE_ENV === 'production' && !config.APP_ORIGIN.startsWith('https://')) throw new Error('Production requires HTTPS');

@@ -18,6 +18,8 @@ Containers run API/worker as an unprivileged node user. Nginx is a separate imag
 
 ## Image targets and isolated deployment verification
 
+To enable student email verification, set `EMAIL_MODE=live`, `EMAIL_RESEND_API_KEY`, and `EMAIL_FROM` (an address on a verified Resend sender domain) in the server's secret configuration. A request is accepted for delivery through the Resend Email API. The account becomes verified only when the signed-in student enters the current code. The default `EMAIL_MODE=disabled` preserves the officer-review-only flow for new registrations. Browser tests use a disposable local mail outbox. [Resend Send Email API](https://resend.com/docs/api-reference/emails/send-email)
+
 The default Dockerfile target is `runtime`: production dependencies, compiled API/worker source and the worker healthcheck, running as UID 1000. The separate `migration` target retains Prisma CLI and migration files; Compose uses it for the one-shot migration service. The API port is explicitly 4000 inside Compose, independent of a developer shell's PORT value. Nginx starts after API readiness and has its own healthcheck.
 
 `UNIVISA_ENV_FILE` selects the container environment file; it defaults to `.env`. Set it to the same file used for Compose interpolation, for example on PowerShell:

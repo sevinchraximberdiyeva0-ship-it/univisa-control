@@ -15,9 +15,27 @@ This is **not** camera-to-passport photo comparison, liveness detection or gover
 3. The account and student record are created atomically with a SUBMITTED identity application and PENDING_ADMISSION enrollment. Passport fields are AES-GCM encrypted; duplicate detection uses a tenant-scoped keyed HMAC. Ordinary lists show only the last four number characters.
 4. While pending/rejected, the student can see their review status and manage device keys, but cannot access student/document/dashboard APIs. Existing pre-feature students retain access; they are not silently treated as newly verified passport holders.
 5. A university officer with MFA opens the audited, no-store details view, checks the original identity document and person through the university's authorized process, confirms that check, records notes, and verifies or rejects. A submitted number alone is never treated as proof of identity.
-6. Verified admission enables the student services. Rejected applicants must contact the office; automated document resubmission/recovery workflows are not yet provided.
+6. Verified admission enables the student services. Rejected applicants can read the officer’s notes, enter corrected document metadata and confirm consent again in the same account. The existing application returns to review and student services stay restricted until approval. Officers must open the current submission before recording a decision.
+
+The university overview links straight to applications awaiting identity review. The count refreshes every 30 seconds while the console is active. Students with submitted applications see updated decisions in the open app within the same interval.
+
+With `EMAIL_MODE=live`, newly self-registered students also need to verify their account email before accessing student services. They request and enter an eight-digit code while signed in. Both email verification and officer approval can be completed in either order. Existing accounts keep their access and can verify their email from Profile. While delivery is disabled, new self-registrations follow the existing officer-review flow. Accounts already marked as requiring email verification retain that requirement.
+
+Email codes are valid for 15 minutes, accept at most five incorrect attempts, and are replaced on resend. Requests are limited to one per minute and five per hour per account. Only a keyed digest is stored in the database.
+
+## Recovering a lost device
+
+The student can open **I lost my device** in UniVisa Talaba. An authorized officer at the student's university checks the student in person against their original document. From the student's **Verified** identity record the MFA-protected officer issues a one-time recovery link for that student. It expires after 30 minutes. A replacement link invalidates the previous one. The officer gives the link directly to the verified student.
+
+The student opens the link and chooses a different password. Recovery signs out all earlier sessions, revokes enrolled passkeys and pending sign-in challenges, clears student TOTP if configured, and starts a fresh session. The student can then enroll a replacement passkey in Profile. Staff accounts use their existing recovery policy.
 
 ## Enrolling and using a device
+
+The main student login page presents Face ID or a device passkey without asking for a phone number, university code, email, or password. To enroll the first key, open **Set up a device key for the first time**, sign in once, and add the key in the profile. Staff open **Staff sign-in** to use their existing credentials and MFA.
+
+The setup screen also offers **Sign in with passport or ID** for active students whose document and account email have both been verified. Enter the university code and document number. If document numbers overlap, also enter the document type and issuing country. The code goes to the verified email on the account. Enter it in the same browser within 15 minutes. The request page does not display the recipient or confirm that an account exists. Email delivery must be enabled for this workflow.
+
+The email sign-in code and the email ownership code serve separate purposes. Staff continue to use their existing sign-in and MFA flow. Students with TOTP enabled use their existing sign-in options.
 
 Use **Profil va Face ID** and provide the current password to add a named key. The browser/OS performs local device verification. Keys are discoverable platform credentials; subsequent sign-in uses **Face ID / qurilma kaliti bilan kirish**. A current password is also required to remove a key or change a phone number. Phone changes clear phone verification, so SMS requires renewed staff verification, while passkeys stay attached to the same account.
 
@@ -31,4 +49,4 @@ Passkeys require HTTPS in deployment. Localhost HTTP is allowed for local develo
 - Exact Origin/RP checks, discoverable-credential userHandle/account matching, signature-counter handling, disabled-account rejection and role restrictions. Private keys remain under the authenticator/passkey provider's control.
 - Tenant-scoped officer access, encrypted passport metadata, normalized keyed duplicate fingerprint, audit events without raw identity fields, and registration throttling.
 - Successful local browser coverage uses a Chromium virtual CTAP2 platform authenticator with user verification. Real Face ID/Touch ID/Windows Hello hardware, cross-device synchronization, physical document verification and a public HTTPS production domain have **not** been tested here.
-- Retention/deletion, managed encryption-key rotation (including the HMAC duplicate index), account recovery, abuse controls beyond in-memory rate limits, email ownership and accessibility/security assessment still require production qualification.
+- Retention/deletion, managed encryption-key rotation (including the HMAC duplicate index), confirmation of the in-person recovery process at the university, live email delivery, distributed abuse controls and accessibility/security assessment still require production qualification.

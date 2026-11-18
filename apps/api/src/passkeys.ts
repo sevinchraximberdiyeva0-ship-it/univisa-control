@@ -68,6 +68,8 @@ passkeyRouter.post('/registration/verify',async(req,res)=>{
   await db.$transaction(async tx=>{
     // Limit enrollment concurrently as well as at options generation.
     await tx.$queryRaw`SELECT id FROM "User" WHERE id=${req.user.id} FOR UPDATE`;
+    const activeSession=await tx.session.count({where:{id:req.session.id,userId:req.user.id,expiresAt:{gt:new Date()},user:{active:true}}});
+    if(!activeSession)throw fail(401,'Authentication required');
     if(await tx.passkeyCredential.count({where:{userId:req.user.id}})>=10)throw fail(409,'Maximum 10 passkeys per account');
     await tx.passkeyCredential.create({data:{id:info.credential.id,userId:req.user.id,publicKey:Buffer.from(info.credential.publicKey),counter:BigInt(info.credential.counter),transports:info.credential.transports??[],deviceType:info.credentialDeviceType,backedUp:info.credentialBackedUp,name:input.name}});
     await tx.auditLog.create({data:{universityId:req.user.universityId,actorId:req.user.id,action:'STUDENT_PASSKEY_REGISTERED',entityId:info.credential.id}});

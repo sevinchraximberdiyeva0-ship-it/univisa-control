@@ -108,11 +108,17 @@ describe.skipIf(!enabled)('PostgreSQL/API/worker integration',()=>{
     config.TELEGRAM_MODE='live';config.TELEGRAM_WEBHOOK_SECRET='integration-secret-only';
     const update={update_id:500,message:{text:'/language_uz',chat:{id:99999,type:'private'},from:{id:99999,is_bot:false}}};
     try{
-      const send=()=>request(app).post('/api/telegram/webhook').set('X-Telegram-Bot-Api-Secret-Token','integration-secret-only').send(update);
+      const send=(payload=update)=>request(app).post('/api/telegram/webhook').set('X-Telegram-Bot-Api-Secret-Token','integration-secret-only').send(payload);
       expect((await send()).status).toBe(200);expect((await send()).status).toBe(200);
       const rows=await db.telegramResponse.findMany({where:{updateId:500}});expect(rows).toHaveLength(1);expect(JSON.parse(decrypt(rows[0].payloadEncrypted)).text).toContain('yangilandi');
+      expect((await send({...update,update_id:501,message:{...update.message,text:'/language'}})).status).toBe(200);
+      const choices=await db.telegramResponse.findUniqueOrThrow({where:{updateId:501}});
+      expect(JSON.parse(decrypt(choices.payloadEncrypted)).text.split('\n').slice(1)).toEqual(['/language_uz','/language_tk','/language_en','/language_ru','/language_ko','/language_zh']);
+      expect((await send({...update,update_id:502,message:{...update.message,text:'/language_zh'}})).status).toBe(200);
+      const changed=await db.telegramResponse.findUniqueOrThrow({where:{updateId:502}});
+      expect(JSON.parse(decrypt(changed.payloadEncrypted)).text).toBe('通知语言已更新。');
       config.TELEGRAM_MODE='mock';await db.telegramResponse.update({where:{id:rows[0].id},data:{scheduledAt:new Date(0)}});const {deliverTelegramResponse}=await import('../src/telegram.js');await deliverTelegramResponse(rows[0].id);expect((await db.telegramResponse.findUnique({where:{id:rows[0].id}})).state).toBe('MOCK');
-    }finally{config.TELEGRAM_MODE=original;config.TELEGRAM_WEBHOOK_SECRET=secret;await db.telegramResponse.deleteMany({where:{updateId:500}});await db.telegramUpdate.deleteMany({where:{id:500}});}
+    }finally{config.TELEGRAM_MODE=original;config.TELEGRAM_WEBHOOK_SECRET=secret;await db.telegramResponse.deleteMany({where:{updateId:{in:[500,501,502]}}});await db.telegramUpdate.deleteMany({where:{id:{in:[500,501,502]}}});}
   });
   it('deduplicates overdue milestones and stops escalation after verified date extension',async()=>{
     const current=await db.studentDocument.findUnique({where:{id:document.id}});const future=new Date(current.expirationDate);future.setUTCDate(future.getUTCDate()+8);

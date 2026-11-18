@@ -1,3 +1,4 @@
+import { languageSchema } from './languages.js';
 import { DateTime } from 'luxon';
 import { z } from 'zod';
 export const DEFAULT_THRESHOLDS=[30,21,14,7,6,5,4,3,2,1,0];
@@ -25,7 +26,7 @@ export function schedule(expiry:Date, now:Date, timezone:string, thresholds:numb
 }
 export const transitions:Record<string,string[]>={DRAFT:['SUBMITTED'],SUBMITTED:['UNDER_REVIEW'],UNDER_REVIEW:['VERIFIED','REJECTED','NEEDS_CORRECTION'],NEEDS_CORRECTION:['SUBMITTED'],REJECTED:[],VERIFIED:[]};
 export function assertTransition(from:string,to:string) { if(!transitions[from]?.includes(to)) throw Object.assign(new Error('Invalid workflow transition'),{status:409}); }
-export const studentInput=z.object({studentNumber:z.string().trim().min(1).max(50),fullName:z.string().trim().min(2).max(150),facultyId:z.string().min(1),program:z.string().min(1).max(120),year:z.coerce.number().int().min(1).max(12),group:z.string().max(50),nationality:z.string().min(2).max(80),language:z.enum(['en','uz','ru']).default('en'),email:z.string().email().transform(v=>v.toLowerCase()),phone:z.string().regex(/^\+[1-9]\d{7,14}$/).optional(),officerId:z.string().optional()});
+export const studentInput=z.object({studentNumber:z.string().trim().min(1).max(50),fullName:z.string().trim().min(2).max(150),facultyId:z.string().min(1),program:z.string().min(1).max(120),year:z.coerce.number().int().min(1).max(12),group:z.string().max(50),nationality:z.string().min(2).max(80),language:languageSchema.default('en'),email:z.string().email().transform(v=>v.toLowerCase()),phone:z.string().regex(/^\+[1-9]\d{7,14}$/).optional(),officerId:z.string().optional()});
 export function previewImport(rows:unknown[],existing:string[],existingEmails:string[]=[]) {
   const seen=new Set(existing);
   const emails=new Set(existingEmails.map(v=>v.toLowerCase()));

@@ -61,6 +61,8 @@ model User {
   universityId String
   university University @relation(fields:[universityId], references:[id])
   email String
+  emailVerifiedAt DateTime?
+  emailVerificationRequired Boolean @default(false)
   name String
   passwordHash String
   role Role
@@ -72,9 +74,40 @@ model User {
   sessions Session[]
   student Student?
   passkeys PasskeyCredential[]
+  emailVerification EmailVerification?
+  passportLoginChallenge PassportLoginChallenge?
+  accountRecovery StudentAccountRecovery?
   createdAt DateTime @default(now())
   @@unique([universityId,email])
   @@index([universityId,role])
+}
+model EmailVerification {
+  userId String @id
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  codeHash String
+  expiresAt DateTime
+  sentAt DateTime
+  windowStartedAt DateTime
+  sendCount Int
+  attempts Int @default(0)
+}
+model PassportLoginChallenge {
+  userId String @id
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  browserHash String
+  codeHash String
+  expiresAt DateTime
+  sentAt DateTime
+  windowStartedAt DateTime
+  sendCount Int
+  attempts Int @default(0)
+  usedAt DateTime?
+}
+model StudentAccountRecovery {
+  userId String @id
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  tokenHash String @unique
+  expiresAt DateTime
 }
 model Session {
   id String @id
@@ -136,6 +169,7 @@ model StudentIdentity {
   encryptedDetails String
   fingerprint String
   numberLast4 String
+  submissionVersion Int @default(1)
   status ReviewState @default(SUBMITTED)
   reviewedBy String?
   reviewedAt DateTime?
@@ -146,6 +180,9 @@ model StudentIdentity {
   @@unique([studentId,universityId])
   @@unique([universityId,fingerprint])
   @@index([universityId,status])
+  @@index([universityId,updatedAt,id])
+  @@index([universityId,status,updatedAt,id])
+  @@index([universityId,numberLast4,status])
 }
 model PasskeyCredential {
   id String @id

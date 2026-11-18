@@ -1,3 +1,4 @@
+import { languageSchema } from './languages.js';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -17,12 +18,15 @@ import { config } from './config.js';
 import { authenticate,authorize,createSession,fail,ownStudent,publicUser,studentScope } from './auth.js';
 import { decrypt,encrypt,equal,hash,token } from './security.js';
 import { assertTransition,dates,previewImport,remaining,studentInput } from './domain.js';
-import { confirmation,planDocument,render } from './notifications.js';
+import { confirmation,messages,planDocument,render } from './notifications.js';
 import { telegramRouter } from './telegram.js';
 import { smsReceiptRouter } from './sms-receipts.js';
 import { notificationAdmin } from './notification-admin.js';
 import { passkeyRouter } from './passkeys.js';
 import { identityPublic,identityAccount,identityStaff } from './identity.js';
+import { emailVerificationRouter } from './email-verification.js';
+import { passportLoginRouter } from './passport-login.js';
+import { accountRecoveryRouter } from './account-recovery.js';
 export const app=express();
 app.disable('x-powered-by');
 app.use(helmet());app.use(cors({origin:config.APP_ORIGIN,credentials:true}));app.use(express.json({limit:'2mb',verify:(req,_res,buffer)=>{(req as express.Request).rawBody=Buffer.from(buffer);}}));app.use(cookieParser());
@@ -30,6 +34,8 @@ app.use(rateLimit({windowMs:60000,limit:300,standardHeaders:'draft-8',legacyHead
 app.get('/api/health',async(_req,res)=>{await db.$queryRaw`SELECT 1`;res.json({status:'ok',sms:config.SMS_MODE,telegram:config.TELEGRAM_MODE});});
 const authLimit=rateLimit({windowMs:15*60000,limit:20,standardHeaders:'draft-8',legacyHeaders:false});
 app.use('/api/auth/passkeys',passkeyRouter);
+app.use('/api/auth/passport-login',passportLoginRouter);
+app.use('/api/auth/account-recovery',accountRecoveryRouter);
 app.use('/api/auth',identityPublic);
 app.post('/api/auth/login',authLimit,async(req,res)=>{
   const input=z.object({university:z.string(),email:z.string().email(),password:z.string().min(1).max(128),otp:z.string().optional()}).parse(req.body);
@@ -58,6 +64,7 @@ app.post('/api/sms/receipts',async(req,res)=>{
 });
 app.use('/api',authenticate);
 app.use('/api/auth',identityAccount);
+app.use('/api/auth/email-verification',emailVerificationRouter);
 app.get('/api/auth/me',async(req,res)=>res.json({user:publicUser(req.user),mfaVerified:req.session.mfaVerified,identity:req.user.role==='STUDENT'?await db.studentIdentity.findFirst({where:{universityId:req.user.universityId,student:{userId:req.user.id}},select:{status:true,numberLast4:true,notes:true}}):null}));
 app.post('/api/auth/logout',async(req,res)=>{await db.session.delete({where:{id:req.session.id}});res.clearCookie('uv_session',{path:'/api'});res.clearCookie('uv_csrf',{path:'/'});res.sendStatus(204);});
 app.post('/api/auth/mfa/setup',async(req,res)=>{
@@ -83,9 +90,18 @@ app.post('/api/universities',async(req,res)=>{
   const passwordHash=await bcrypt.hash(input.adminPassword,12);
   const created=await db.$transaction(async tx=>{const university=await tx.university.create({data:{name:input.name,slug:input.slug,contactEmail:input.contactEmail,timezone:input.timezone}});await tx.user.create({data:{universityId:university.id,email:input.adminEmail.toLowerCase(),name:input.adminName,passwordHash,role:'UNIVERSITY_ADMIN'}});await tx.smsProviderConfiguration.create({data:{universityId:university.id}});await tx.auditLog.create({data:{universityId:university.id,actorId:req.user.id,action:'UNIVERSITY_PROVISIONED',entityId:university.id}});return university;});res.status(201).json(created);
 });
+app.get('/api/profile',async(req,res)=>{
+  if(req.user.role!=='STUDENT')throw fail(403,'Student account required');
+  const profile=await db.student.findFirst({where:await studentScope(req),select:{language:true,smsEnabled:true,telegramEnabled:true}});
+  if(!profile)throw fail(404,'Student record not found');
+  res.json(profile);
+});
 app.patch('/api/profile',async(req,res)=>{
-  if(req.user.role!=='STUDENT')throw fail(403,'Student account required');const input=z.object({language:z.enum(['en','uz','ru']),smsEnabled:z.boolean(),telegramEnabled:z.boolean()}).parse(req.body);
-  await db.student.updateMany({where:{userId:req.user.id,universityId:req.user.universityId,archivedAt:null},data:input});await audit(req.user.universityId,req.user.id,'NOTIFICATION_PREFERENCES_UPDATED',req.user.id);res.sendStatus(204);
+  if(req.user.role!=='STUDENT')throw fail(403,'Student account required');
+  const input=z.object({language:languageSchema,smsEnabled:z.boolean().optional(),telegramEnabled:z.boolean().optional()}).parse(req.body);
+  const result=await db.student.updateMany({where:await studentScope(req),data:input});
+  if(!result.count)throw fail(404,'Student record not found');
+  await audit(req.user.universityId,req.user.id,'NOTIFICATION_PREFERENCES_UPDATED',req.user.id);res.sendStatus(204);
 });
 app.get('/api/faculties',async(req,res)=>res.json(await db.faculty.findMany({where:{universityId:req.user.universityId,...(req.user.role==='FACULTY_COORDINATOR'?{id:req.user.facultyId??'none'}:{})},orderBy:{name:'asc'}})));
 app.get('/api/students',async(req,res)=>{
@@ -231,7 +247,21 @@ app.post('/api/staff',authorize('admin'),async(req,res)=>{
 });
 app.get('/api/audit',async(req,res)=>{if(!['SUPER_ADMIN','UNIVERSITY_ADMIN','AUDITOR'].includes(req.user.role))throw fail(403,'Audit access restricted');res.json(await db.auditLog.findMany({where:{universityId:req.user.universityId},orderBy:{createdAt:'desc'},take:500}));});
 app.get('/api/tasks',async(req,res)=>{if(req.user.role==='STUDENT')throw fail(403,'Staff only');const students=await db.student.findMany({where:await studentScope(req),select:{id:true}});res.json(await db.staffTask.findMany({where:{universityId:req.user.universityId,studentId:{in:students.map(s=>s.id)},resolvedAt:null},orderBy:{createdAt:'desc'},take:500}));});
-app.get('/api/settings',authorize('admin'),async(req,res)=>res.json({university:await db.university.findUnique({where:{id:req.user.universityId}}),rules:await db.notificationRule.findMany({where:{universityId:req.user.universityId},orderBy:{daysRemaining:'desc'}}),sms:await db.smsProviderConfiguration.findUnique({where:{universityId:req.user.universityId},select:{provider:true,monthlyQuota:true,unitCost:true}}),templates:await db.notificationTemplate.findMany({where:{universityId:req.user.universityId}})}));
+app.get('/api/settings',authorize('admin'),async(req,res)=>{
+  const universityId=req.user.universityId;
+  const [university,rules,sms,storedTemplates]=await Promise.all([
+    db.university.findUnique({where:{id:universityId}}),
+    db.notificationRule.findMany({where:{universityId},orderBy:{daysRemaining:'desc'}}),
+    db.smsProviderConfiguration.findUnique({where:{universityId},select:{provider:true,monthlyQuota:true,unitCost:true}}),
+    db.notificationTemplate.findMany({where:{universityId}}),
+  ]);
+  const templates=new Map<string,{language:string;kind:string;body:string}>();
+  for(const language of languageSchema.options){
+    for(const [kind,body] of Object.entries(messages[language]))templates.set(`${language}:${kind}`,{language,kind,body});
+  }
+  for(const template of storedTemplates)templates.set(`${template.language}:${template.kind}`,template);
+  res.json({university,rules,sms,templates:[...templates.values()]});
+});
 app.put('/api/settings',authorize('admin'),async(req,res)=>{
   const input=z.object({timezone:z.string().refine(v=>DateTime.now().setZone(v).isValid),deliveryStart:z.number().int().min(0).max(23),deliveryEnd:z.number().int().min(1).max(24),thresholds:z.array(z.number().int().min(0).max(365)).min(1).max(40),contactEmail:z.string().email(),retentionDays:z.number().int().min(30).max(3650)}).refine(v=>v.deliveryStart<v.deliveryEnd).parse(req.body);
   await db.$transaction(async tx=>{
@@ -243,7 +273,7 @@ app.put('/api/settings',authorize('admin'),async(req,res)=>{
   },{timeout:60000});res.sendStatus(204);
 });
 app.put('/api/sms/settings',authorize('admin'),async(req,res)=>{const input=z.object({monthlyQuota:z.number().int().min(0).max(1000000),unitCost:z.number().min(0).max(100000)}).parse(req.body);await db.smsProviderConfiguration.upsert({where:{universityId:req.user.universityId},update:input,create:{...input,universityId:req.user.universityId,provider:'mock'}});await audit(req.user.universityId,req.user.id,'SMS_BUDGET_UPDATED',req.user.universityId);res.sendStatus(204);});
-app.put('/api/templates',authorize('admin'),async(req,res)=>{const input=z.object({language:z.enum(['uz','en','ru']),kind:z.enum(['confirmed','reminder','critical']),body:z.string().min(10).max(1200)}).parse(req.body);await db.notificationTemplate.upsert({where:{universityId_language_kind:{universityId:req.user.universityId,language:input.language,kind:input.kind}},update:{body:input.body},create:{...input,universityId:req.user.universityId}});await audit(req.user.universityId,req.user.id,'TEMPLATE_UPDATED',`${input.language}-${input.kind}`);res.sendStatus(204);});
+app.put('/api/templates',authorize('admin'),async(req,res)=>{const input=z.object({language:languageSchema,kind:z.enum(['confirmed','reminder','critical']),body:z.string().min(10).max(1200)}).parse(req.body);await db.notificationTemplate.upsert({where:{universityId_language_kind:{universityId:req.user.universityId,language:input.language,kind:input.kind}},update:{body:input.body},create:{...input,universityId:req.user.universityId}});await audit(req.user.universityId,req.user.id,'TEMPLATE_UPDATED',`${input.language}-${input.kind}`);res.sendStatus(204);});
 app.post('/api/telegram/link-token',async(req,res)=>{
   if(req.user.role!=='STUDENT')throw fail(403,'Student account required');const student=await db.student.findFirstOrThrow({where:{userId:req.user.id,universityId:req.user.universityId}});const value=token();
   await db.$transaction(async tx=>{await tx.$queryRaw`SELECT id FROM "Student" WHERE id=${student.id} FOR UPDATE`;await tx.telegramLinkToken.deleteMany({where:{studentId:student.id}});await tx.telegramLinkToken.create({data:{hash:hash(value),universityId:req.user.universityId,studentId:student.id,expiresAt:new Date(Date.now()+5*60000)}});});res.json({token:value,expiresIn:300,mode:config.TELEGRAM_MODE});

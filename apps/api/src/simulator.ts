@@ -1,9 +1,10 @@
+import { languageSchema } from './languages.js';
 import { DateTime } from 'luxon';
 import { z } from 'zod';
 import { dateOnly,schedule } from './domain.js';
 import { render } from './notifications.js';
 import { MockSmsProvider,deliveryFailure } from './providers.js';
-export const simulationInput=z.object({expirationDate:dateOnly,language:z.enum(['uz','en','ru']).default('uz'),renewAtDays:z.number().int().min(0).max(30).nullable().default(null),smsFailure:z.enum(['none','temporary','permanent','ambiguous']).default('none'),telegramStarted:z.boolean().default(true)});
+export const simulationInput=z.object({expirationDate:dateOnly,language:languageSchema.default('uz'),renewAtDays:z.number().int().min(0).max(30).nullable().default(null),smsFailure:z.enum(['none','temporary','permanent','ambiguous']).default('none'),telegramStarted:z.boolean().default(true)});
 export async function simulate(input:z.infer<typeof simulationInput>,policy:{timezone:string;deliveryStart:number;deliveryEnd:number;thresholds:number[];overdueOffsets:number[]}){
   const expiry=new Date(input.expirationDate),start=DateTime.fromISO(input.expirationDate,{zone:policy.timezone}).minus({days:30}).set({hour:policy.deliveryStart});
   const slots=schedule(expiry,start.toJSDate(),policy.timezone,policy.thresholds,policy.deliveryStart,policy.deliveryEnd);

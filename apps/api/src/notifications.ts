@@ -4,28 +4,44 @@ import { db } from './db.js';
 import { remaining, schedule } from './domain.js';
 import { config } from './config.js';
 import { decrypt,encrypt } from './security.js';
+import { resolveLanguage,type Language } from './languages.js';
 import { DevSmsProvider, MockSmsProvider, deliveryFailure, smsCredentials, telegramSend, type SmsProvider, type SendResult } from './providers.js';
 export { MockSmsProvider,telegramSend } from './providers.js';
 export type { SmsProvider,SendResult } from './providers.js';
 type Tx=Prisma.TransactionClient;
-export const messages={
+export const messages:Record<Language,{reminder:string;critical:string;confirmed:string}>={
   en:{reminder:'Your {type} is scheduled to expire on {date}. Remaining time: {days} days. Please contact the university international office for renewal assistance.',critical:'URGENT: Your {type} expires on {date}. {days} days remain. Please contact the university international office today.',confirmed:'Your updated {type} information has been verified by the university. New expiration date: {date}. Previous reminders have been canceled.'},
   uz:{reminder:'{type} hujjatingizning amal qilish muddati {date} kuni tugashi rejalashtirilgan. {days} kun qoldi. Yangilash uchun universitet xalqaro bo‘limiga murojaat qiling.',critical:'SHOSHILINCH: {type} hujjatingiz {date} kuni tugaydi. {days} kun qoldi. Bugun universitet xalqaro bo‘limiga murojaat qiling.',confirmed:'Universitet yangilangan {type} ma’lumotlaringizni tasdiqladi. Yangi amal qilish muddati: {date}. Oldingi eslatmalar bekor qilindi.'},
-  ru:{reminder:'Срок действия документа {type} заканчивается {date}. Осталось дней: {days}. Обратитесь в международный отдел университета для продления.',critical:'СРОЧНО: срок действия документа {type} заканчивается {date}. Осталось дней: {days}. Свяжитесь с международным отделом университета сегодня.',confirmed:'Университет подтвердил обновлённые сведения о документе {type}. Новый срок действия: {date}. Предыдущие напоминания отменены.'}
+  ru:{reminder:'Срок действия документа {type} заканчивается {date}. Осталось дней: {days}. Обратитесь в международный отдел университета для продления.',critical:'СРОЧНО: срок действия документа {type} заканчивается {date}. Осталось дней: {days}. Свяжитесь с международным отделом университета сегодня.',confirmed:'Университет подтвердил обновлённые сведения о документе {type}. Новый срок действия: {date}. Предыдущие напоминания отменены.'},
+  tk:{reminder:'{type} resminamaňyzyň möhleti {date} senesinde gutarýar. {days} gün galdy. Möhleti uzaltmak üçin uniwersitetiň halkara bölümine ýüz tutuň.',critical:'GYSSAGLY: {type} resminamaňyzyň möhleti {date} senesinde gutarýar. {days} gün galdy. Şu gün uniwersitetiň halkara bölümine ýüz tutuň.',confirmed:'Uniwersitet {type} resminamaňyzyň täzelenen maglumatlaryny tassyklady. Täze gutarýan senesi: {date}. Öňki ýatlatmalar ýatyryldy.'},
+  ko:{reminder:'{type} 서류의 유효기간이 {date}에 만료될 예정입니다. {days}일 남았습니다. 갱신은 대학 국제처에 문의하세요.',critical:'긴급: {type} 서류가 {date}에 만료됩니다. {days}일 남았습니다. 오늘 대학 국제처에 문의하세요.',confirmed:'대학에서 갱신된 {type} 정보를 확인했습니다. 새 만료일은 {date}입니다. 이전 알림은 취소되었습니다.'},
+  zh:{reminder:'您的{type}证件预计于{date}到期，还有{days}天。请联系大学国际事务办公室办理续期。',critical:'紧急：您的{type}证件将于{date}到期，还有{days}天。请于今天联系大学国际事务办公室。',confirmed:'大学已核实您更新后的{type}证件信息。新的到期日期为{date}。之前的提醒已取消。'},
+};
+const corrections:Record<Language,string>={
+  en:'Your renewal submission needs attention. Please sign in to your university portal to review the officer’s notes and requested corrections. This message is not a determination of your immigration status.',
+  uz:'Yangilash arizangizga e’tibor talab etiladi. Xodim izohlari va so‘ralgan tuzatishlarni ko‘rish uchun universitet portaliga kiring. Bu xabar immigratsiya maqomingiz bo‘yicha xulosa emas.',
+  ru:'Ваша заявка на продление требует внимания. Войдите в университетский портал, чтобы прочитать замечания сотрудника и внести исправления. Это сообщение не является оценкой вашего иммиграционного статуса.',
+  tk:'Möhleti uzaltmak baradaky arzaňyza serediň. Işgäriň belliklerini we islenen düzedişleri görmek üçin uniwersitetiň portalyna giriň. Bu habar migrasiýa ýagdaýyňyz barada karar däldir.',
+  ko:'갱신 신청을 확인해 주세요. 대학 포털에 로그인하여 담당자의 의견과 수정 요청을 확인하세요. 이 메시지는 체류 자격에 관한 결정이 아닙니다.',
+  zh:'您的续期申请需要处理。请登录大学门户，查看工作人员的意见和修改要求。此消息不代表对您移民身份的认定。',
 };
 export function render(language:string,kind:string,type:string,date:string,days:number,custom?:string) {
   if(custom)return custom.replaceAll('{type}',type).replaceAll('{date}',date).replaceAll('{days}',String(days));
+  const lang=resolveLanguage(language);
   const special={
     en:{urgent:'URGENT: Your {type} expires on {date}. 14 days remain. Contact the university international office to arrange renewal.',expired:'FINAL WARNING: Your {type} is scheduled to expire today ({date}). Contact the university international office immediately. Staff have been alerted.',overdue:'Your {type} expiration date was {date}. Please contact the university international office to review your record and renewal status.'},
     uz:{urgent:'SHOSHILINCH: {type} hujjatingiz {date} kuni tugaydi. 14 kun qoldi. Yangilash uchun universitet xalqaro bo‘limiga murojaat qiling.',expired:'YAKUNIY OGOHLANTIRISH: {type} hujjatingiz bugun ({date}) tugashi rejalashtirilgan. Zudlik bilan xalqaro bo‘limga murojaat qiling. Mas’ul xodim ogohlantirildi.',overdue:'{type} hujjatingizning amal qilish sanasi {date} edi. Ma’lumotlar va yangilash holatini tekshirish uchun xalqaro bo‘limga murojaat qiling.'},
-    ru:{urgent:'СРОЧНО: срок документа {type} заканчивается {date}. Осталось 14 дней. Свяжитесь с международным отделом для продления.',expired:'ПОСЛЕДНЕЕ ПРЕДУПРЕЖДЕНИЕ: срок документа {type} заканчивается сегодня ({date}). Немедленно свяжитесь с международным отделом. Сотрудник уведомлён.',overdue:'Срок документа {type} был указан до {date}. Свяжитесь с международным отделом для проверки данных и статуса продления.'}
+    ru:{urgent:'СРОЧНО: срок документа {type} заканчивается {date}. Осталось 14 дней. Свяжитесь с международным отделом для продления.',expired:'ПОСЛЕДНЕЕ ПРЕДУПРЕЖДЕНИЕ: срок документа {type} заканчивается сегодня ({date}). Немедленно свяжитесь с международным отделом. Сотрудник уведомлён.',overdue:'Срок документа {type} был указан до {date}. Свяжитесь с международным отделом для проверки данных и статуса продления.'},
+    tk:{urgent:'GYSSAGLY: {type} resminamaňyzyň möhleti {date} senesinde gutarýar. 14 gün galdy. Möhleti uzaltmak üçin halkara bölüme ýüz tutuň.',expired:'SOŇKY DUÝDURYŞ: {type} resminamaňyzyň möhleti şu gün ({date}) gutarýar. Derrew halkara bölüme ýüz tutuň. Jogapkär işgär habarly edildi.',overdue:'{type} resminamaňyzyň möhleti {date} senesinde gutardy. Maglumatlaryňyzy we arzanyň ýagdaýyny barlamak üçin halkara bölüme ýüz tutuň.'},
+    ko:{urgent:'긴급: {type} 서류가 {date}에 만료됩니다. 14일 남았습니다. 갱신은 대학 국제처에 문의하세요.',expired:'최종 안내: {type} 서류가 오늘({date}) 만료될 예정입니다. 즉시 대학 국제처에 문의하세요. 담당자에게도 알렸습니다.',overdue:'{type} 서류의 만료일은 {date}였습니다. 기록과 갱신 상태를 확인하려면 대학 국제처에 문의하세요.'},
+    zh:{urgent:'紧急：您的{type}证件将于{date}到期，还有14天。请联系大学国际事务办公室办理续期。',expired:'最后提醒：您的{type}证件预计于今天（{date}）到期。请立即联系大学国际事务办公室。工作人员已收到通知。',overdue:'您的{type}证件已于{date}到期。请联系大学国际事务办公室核对记录和续期状态。'},
   };
-  const selected=special[language as keyof typeof special]??special.en;
+  const selected=special[lang];
   const specialText=kind==='OVERDUE'?selected.overdue:kind==='REMINDER'&&days===0?selected.expired:kind==='REMINDER'&&days===14?selected.urgent:undefined;
   if(specialText)return specialText.replaceAll('{type}',type).replaceAll('{date}',date);
-  if(kind==='CORRECTION')return custom??({en:'Your renewal submission needs attention. Please sign in to your university portal to review the officer’s notes and requested corrections. This message is not a determination of your immigration status.',uz:'Yangilash arizangizga e’tibor talab etiladi. Xodim izohlari va so‘ralgan tuzatishlarni ko‘rish uchun universitet portaliga kiring. Bu xabar immigratsiya maqomingiz bo‘yicha xulosa emas.',ru:'Ваша заявка на продление требует внимания. Войдите в университетский портал, чтобы прочитать замечания сотрудника и внести исправления. Это сообщение не является оценкой вашего иммиграционного статуса.'}[language]??'Please sign in to your university portal to review the requested renewal corrections.');
-  const locale=messages[language as keyof typeof messages]??messages.en;
-  return (custom??(kind==='CONFIRMATION'?locale.confirmed:days<=7?locale.critical:locale.reminder)).replaceAll('{type}',type).replaceAll('{date}',date).replaceAll('{days}',String(days));
+  if(kind==='CORRECTION')return corrections[lang];
+  const locale=messages[lang];
+  return (kind==='CONFIRMATION'?locale.confirmed:days<=7?locale.critical:locale.reminder).replaceAll('{type}',type).replaceAll('{date}',date).replaceAll('{days}',String(days));
 }
 export async function planDocument(tx:Tx,document:StudentDocument,now=new Date()) {
   const university=await tx.university.findUniqueOrThrow({where:{id:document.universityId}});

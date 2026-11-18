@@ -4,6 +4,10 @@ Independent university immigration-document management application. React/TypeSc
 
 ## Local setup
 
+**UniVisa Talaba** is available at <http://localhost:5173/talaba/>. It is an installable, mobile-first web app served on the same origin as UniVisa Control. The two interfaces use the same student account, passkey, documents, renewal applications, and notifications. The student app uses a live connection for private records and does not cache them in its service worker.
+
+On a deployed HTTPS address, select **Install app** in UniVisa Talaba. It opens the browser's install prompt when available and otherwise shows instructions for Android Chrome, iPhone/iPad Safari, Windows/Linux/Chromebook Chrome or Edge, and Safari on macOS Sonoma 14 or later. Browsers without installation support can open the same student app directly. The install option is hidden when the app opens in standalone mode.
+
 Requires Node 22.12+ (Node 22 LTS recommended), PostgreSQL 17 and Redis 7. Docker Compose can supply the latter two services.
 
 1. Copy `.env.example` to `.env`. Set a unique database password, a 64-character hex `ENCRYPTION_KEY`, and distinct seed passwords of at least 14 characters. Match `DATABASE_URL` to the database credentials. Do not commit `.env`.
@@ -25,7 +29,7 @@ Requires Node 22.12+ (Node 22 LTS recommended), PostgreSQL 17 and Redis 7. Docke
 
 ## Delivery scope
 
-Implemented: session authentication and staff TOTP MFA; tenant/student/faculty scopes; registry create/edit/archive API; CSV/Excel preview and transactional commit; document versioning; encrypted private upload/download; renewal review and idempotent verification; PostgreSQL notification outbox and Redis reconciliation worker; durable multilingual Telegram commands and one-time linking; DevSMS and mock SMS adapters; signed SMS receipts and bounded polling; notification monitoring and safe 30-day simulator; English/Uzbek/Russian templates; dashboard, student portal, calendar list, reports, exports and audit views; settings and staff management.
+Implemented: session authentication and staff TOTP MFA; tenant/student/faculty scopes; registry create/edit/archive API; CSV/Excel preview and transactional commit; document versioning; encrypted private upload/download; renewal review and idempotent verification; PostgreSQL notification outbox and Redis reconciliation worker; durable multilingual Telegram commands and one-time linking; DevSMS and mock SMS adapters; signed SMS receipts and bounded polling; notification monitoring and safe 30-day simulator; Uzbek, Turkmen, English, Russian, Korean and Simplified Chinese notification templates; dashboard, student portal, calendar list, reports, exports and audit views; settings and staff management.
 
 Production qualification remains open. DevSMS adapter contracts are tested with mock HTTP responses; real delivery requires credentials, approved sender and an authorized end-to-end test. Telegram live mode requires genuine credentials, HTTPS webhook registration, and an authorized test. A bot API acceptance is not a read/delivery receipt. There is no government integration. See `docs/DELIVERY_STATUS.md` for gaps and verification results.
 

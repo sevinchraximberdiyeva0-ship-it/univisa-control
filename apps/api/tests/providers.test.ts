@@ -2,7 +2,7 @@ import { beforeEach,afterEach,describe,it,expect,vi } from 'vitest';
 process.env.DATABASE_URL??='postgresql://unused@localhost/unused';process.env.ENCRYPTION_KEY??='a'.repeat(64);process.env.NODE_ENV='test';
 const {DevSmsProvider,MockSmsProvider,verifyDevSmsSignature,telegramSend,deliveryFailure}=await import('../src/providers.js');
 const {config}=await import('../src/config.js');
-const {simulate}=await import('../src/simulator.js');
+const {simulate,simulationInput}=await import('../src/simulator.js');
 const {render}=await import('../src/notifications.js');
 const {DEFAULT_THRESHOLDS}=await import('../src/domain.js');
 const {createHmac}=await import('node:crypto');
@@ -41,6 +41,16 @@ describe('safe shared-engine simulator and templates',()=>{
   it('executes the full milestone sequence without network or queue writes',async()=>{const result=await simulate(input,policy);expect(result.realMessagesSent).toBe(0);expect(result.queuedJobs).toBe(0);expect(result.events.filter(e=>e.channel==='SMS').map(e=>e.daysRemaining)).toEqual(DEFAULT_THRESHOLDS);expect(result.events.filter(e=>e.kind==='OVERDUE')).toHaveLength(3);expect(fetch).not.toHaveBeenCalled();});
   it('cancels future reminders on verified renewal and immediately confirms',async()=>{const result=await simulate({...input,renewAtDays:7},policy);expect(result.events.filter(e=>e.kind==='CONFIRMATION')).toHaveLength(3);expect(result.events.some(e=>e.kind==='REMINDER'&&e.daysRemaining<=7)).toBe(false);expect(result.events.some(e=>e.kind==='OVERDUE')).toBe(false);});
   it('simulates retries and Telegram not started',async()=>{const result=await simulate({...input,smsFailure:'temporary',telegramStarted:false},policy);expect(result.events.filter(e=>e.channel==='SMS'&&e.daysRemaining===30)).toHaveLength(4);expect(result.events.filter(e=>e.channel==='TELEGRAM').every(e=>e.state==='UNAVAILABLE')).toBe(true);});
-  it.each(['uz','en','ru'])('has distinct urgent, expiration-day, overdue and confirmation templates in %s',lang=>{const urgent=render(lang,'REMINDER','VISA','2028-03-30',14),normal=render(lang,'REMINDER','VISA','2028-03-30',21),final=render(lang,'REMINDER','VISA','2028-03-30',0);expect(urgent).not.toBe(normal);expect(final).not.toBe(normal);expect(render(lang,'CONFIRMATION','VISA','2029-03-30',365)).toContain('2029-03-30');expect(render(lang,'OVERDUE','VISA','2028-03-30',-1)).toContain('2028-03-30');});
+  it.each([['uz','kun'],['tk','gün'],['en','days'],['ru','дней'],['ko','일'],['zh','天']])('renders the notification milestones in %s',async(lang,word)=>{
+    const date='2028-03-30';
+    const texts=[14,21,0,5].map(days=>render(lang,'REMINDER','VISA',date,days));
+    expect(new Set(texts).size).toBe(4);
+    expect(texts[1]).toContain(word);
+    expect(render(lang,'CONFIRMATION','VISA',date,365)).toContain(date);
+    expect(render(lang,'OVERDUE','VISA',date,-1)).toContain(date);
+    if(lang!=='en')expect(render(lang,'CORRECTION','VISA',date,0)).not.toBe(render('en','CORRECTION','VISA',date,0));
+    const result=await simulate(simulationInput.parse({...input,language:lang}),policy);
+    expect(result.events.find(event=>event.daysRemaining===21&&event.channel==='SMS')?.message).toContain(word);
+  });
   it('retains mock SMS for local tests',async()=>expect((await new MockSmsProvider().send('+998000000000','test','id')).state).toBe('MOCK'));
 });

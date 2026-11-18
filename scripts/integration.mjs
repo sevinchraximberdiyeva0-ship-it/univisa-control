@@ -1,6 +1,6 @@
 import EmbeddedPostgres from 'embedded-postgres';
 import { randomBytes } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { mkdir,unlink } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import pgClient from 'pg';
@@ -13,6 +13,7 @@ const dir=path.resolve(root,'test-results',`postgres-${Date.now()}`);
 await mkdir(dir,{recursive:true});
 const password=randomBytes(24).toString('hex');
 const browserMode=process.argv.includes('--browser');
+const emailOutbox=path.join(dir,'synthetic-email.jsonl');
 const children=[];
 const pg=new EmbeddedPostgres({databaseDir:dir,user:'univisa_test',password,port:55439,persistent:true,authMethod:'scram-sha-256',initdbFlags:['--encoding=UTF8','--locale=C'],onLog:()=>{},onError:console.error});
 function run(file,args,env) {return new Promise((resolve,reject)=>{const child=spawn(process.execPath,[file,...args],{cwd:root,env:{...process.env,...env},stdio:'inherit'});child.on('error',reject);child.on('exit',code=>code===0?resolve():reject(new Error(`Command exited ${code}`)));});}
@@ -27,12 +28,16 @@ try {
   await run('node_modules/prisma/build/index.js',['migrate','deploy','--schema','apps/api/prisma/schema.prisma'],{DATABASE_URL:url});
   await run('node_modules/prisma/build/index.js',['migrate','diff','--from-url',url,'--to-schema-datamodel','apps/api/prisma/schema.prisma','--exit-code'],{DATABASE_URL:url});
   if(browserMode) {
-    const env={DATABASE_URL:url,NODE_ENV:'test',SMS_MODE:'mock',TELEGRAM_MODE:'mock',ALLOW_LIVE_NOTIFICATIONS:'false',ENCRYPTION_KEY:randomBytes(32).toString('hex'),SEED_ADMIN_EMAIL:'admin@example.invalid',SEED_ADMIN_PASSWORD:randomBytes(20).toString('hex'),SEED_STUDENT_PASSWORD:randomBytes(20).toString('hex'),APP_ORIGIN:'http://localhost:5173',STORAGE_PATH:path.join(dir,'private-files')};
+    const env={DATABASE_URL:url,NODE_ENV:'test',SMS_MODE:'mock',TELEGRAM_MODE:'mock',EMAIL_MODE:'mock',TEST_EMAIL_OUTBOX:emailOutbox,ALLOW_LIVE_NOTIFICATIONS:'false',ENCRYPTION_KEY:randomBytes(32).toString('hex'),SEED_ADMIN_EMAIL:'admin@example.invalid',SEED_ADMIN_PASSWORD:randomBytes(20).toString('hex'),SEED_STUDENT_PASSWORD:randomBytes(20).toString('hex'),APP_ORIGIN:'http://localhost:5173',STORAGE_PATH:path.join(dir,'private-files')};
     await run('node_modules/tsx/dist/cli.mjs',['apps/api/prisma/seed.ts'],env);
     children.push(spawn(process.execPath,['node_modules/tsx/dist/cli.mjs','apps/api/src/server.ts'],{cwd:root,env:{...process.env,...env},stdio:'inherit',windowsHide:true}));
     children.push(spawn(process.execPath,[path.resolve('node_modules/vite/bin/vite.js'),'--host','127.0.0.1'],{cwd:path.join(root,'apps/web'),env:process.env,stdio:'inherit',windowsHide:true}));
     await ready('http://localhost:4000/api/health');await ready('http://localhost:5173');
-    await run('node_modules/@playwright/test/cli.js',['test'],{E2E_ADMIN_PASSWORD:env.SEED_ADMIN_PASSWORD,E2E_STUDENT_PASSWORD:env.SEED_STUDENT_PASSWORD});
-  }else await run('node_modules/vitest/vitest.mjs',['run','--root','apps/api'],{TEST_DATABASE_URL:url,REQUIRE_REDIS_TESTS:String(requireRedis),SMS_MODE:'mock',TELEGRAM_MODE:'mock',ALLOW_LIVE_NOTIFICATIONS:'false'});
+    await run('node_modules/@playwright/test/cli.js',['test'],{E2E_DATABASE_URL:url,E2E_EMAIL_OUTBOX:emailOutbox,E2E_ADMIN_PASSWORD:env.SEED_ADMIN_PASSWORD,E2E_STUDENT_PASSWORD:env.SEED_STUDENT_PASSWORD});
+  }else await run('node_modules/vitest/vitest.mjs',['run','--root','apps/api'],{TEST_DATABASE_URL:url,REQUIRE_REDIS_TESTS:String(requireRedis),SMS_MODE:'mock',TELEGRAM_MODE:'mock',EMAIL_MODE:'disabled',ALLOW_LIVE_NOTIFICATIONS:'false'});
   console.log('Database integration run completed.');
-} finally {for(const child of children)child.kill();if(started){if(process.platform==='win32')await control(['stop','-D',dir,'-m','fast','-w']);else await pg.stop();}}
+} finally {
+  for(const child of children)child.kill();
+  if(started){if(process.platform==='win32')await control(['stop','-D',dir,'-m','fast','-w']);else await pg.stop();}
+  if(browserMode)await unlink(emailOutbox).catch(error=>{if(error.code!=='ENOENT')throw error;});
+}

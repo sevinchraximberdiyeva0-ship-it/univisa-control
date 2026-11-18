@@ -1,0 +1,15 @@
+{
+  "id": "/talaba/",
+  "name": "UniVisa Talaba",
+  "short_name": "UniVisa Talaba",
+  "lang": "uz",
+  "start_url": "/talaba/",
+  "scope": "/talaba/",
+  "display": "standalone",
+  "background_color": "#f4f5ef",
+  "theme_color": "#153f35",
+  "icons": [
+    { "src": "/talaba/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/talaba/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

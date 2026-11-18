@@ -1,4 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-export default defineConfig({plugins:[react(),tailwindcss()],server:{port:5173,proxy:{'/api':'http://localhost:4000'}}});
+import {fileURLToPath} from 'node:url';
+export default defineConfig({
+  plugins:[react(),tailwindcss()],
+  server:{port:5173,proxy:{'/api':'http://localhost:4000'}},
+  build:{rollupOptions:{input:{
+    control:fileURLToPath(new URL('./index.html',import.meta.url)),
+    student:fileURLToPath(new URL('./talaba/index.html',import.meta.url)),
+  }}},
+});
